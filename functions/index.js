@@ -91,21 +91,26 @@ exports.onSynsetDelete = functions.database
     const { synsetId } = context.params;
     return synsetRef.once('value', synSnap => {
       const synset = synSnap.val();
-      const members = Object.keys(synset);
-      if (members.length === 1) {
-        const theMemberId = members[0];
-        snapshot.ref.parent.parent.parent
-          .child('entries').child(theMemberId).child('synset')
-          .set('');
-      } else if (!synset[synsetId]) {
-        const newSynsetId = Object.entries(synset)
-          .sort((a, b) => Number(b[1]) - Number(a[1]))[0][0];
-        members.forEach(member => {
-          snapshot.ref.parent.parent.parent
-            .child('entries').child(member).child('synset')
-            .set(newSynsetId);
-        });
-
+      if (!synset) {
+        return null;
+      } else {
+        const members = Object.keys(synset);
+        if (members.length === 1) {
+          const theMemberId = members[0];
+          return snapshot.ref.parent.parent.parent
+            .child('entries').child(theMemberId).child('synset')
+            .set('');
+        } else if (!synset[synsetId]) {
+          const newSynsetId = Object.entries(synset)
+            .sort((a, b) => Number(b[1]) - Number(a[1]))[0][0];
+            return members.forEach(member => {
+            snapshot.ref.parent.parent.parent
+              .child('entries').child(member).child('synset')
+              .set(newSynsetId);
+          });
+        } else {
+          return null;
+        }
       }
     });
   });
