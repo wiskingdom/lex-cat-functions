@@ -71,7 +71,7 @@ exports.onEntrySynsetUpdate = functions.database
     const entryFreqRef = change.after.ref.parent.parent.parent
       .child('superEntries').child(superEntryId).child('freq');
     const updatedAt = Date.now();
-    stateRef.child('updatedAt').set(updatedAt);
+    change.after.ref.parent.child('updatedAt').set(updatedAt);
     stateRef.child('hasSynset').set(Boolean(synset));
 
     if (synset && bfSynset) {
