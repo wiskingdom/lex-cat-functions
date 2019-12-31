@@ -1,13 +1,17 @@
 const functions = require('firebase-functions');
 
 // subfunctions
-const getEntryStage = (isEntry, pos, sem, needCheck) => {
-  if (!isEntry) {
+const getEntryStage = (isTouched, isSkipped, needCheck, pos, sem) => {
+  if (!isTouched) {
     return 0;
-  } else if (!needCheck && pos && sem ) {
+  }
+  if (isSkipped) {
     return 3;
-  } else {
+  }
+  if (!needCheck && pos && sem) {
     return 2;
+  } else {
+    return 1;
   }
 };
 const getWorksetId = entryId => entryId.split('-').slice(0, 2).join('-');
@@ -17,23 +21,23 @@ const getSuperEntryId = entryId => entryId.split('-').slice(0, 3).join('-');
 exports.onEntryUpdate = functions.database
   .ref('/dict/{domainName}/entries/{entryId}')
   .onUpdate((change, context) => {
-    const { isEntry, pos, sem, needCheck } = change.after.val();
+    const { isTouched, isSkipped, needCheck, pos, sem } = change.after.val();
     const bf = change.before.val();
-    if (isEntry === bf.isEntry 
-      && pos === bf.pos 
-      && sem === bf.sem 
+    if (isTouched === bf.isTouched
+      && isSkipped === bf.isSkipped
+      && pos === bf.pos
+      && sem === bf.sem
       && needCheck === bf.needCheck) {
       return null;
     }
-
     const { entryId } = context.params;
     const worksetId = getWorksetId(entryId);
-    const stage = getEntryStage(isEntry, pos, sem, needCheck);
+    const stage = getEntryStage(isTouched, isSkipped, needCheck, pos, sem);
     const updatedAt = Date.now();
     const stateRef = change.after.ref.parent.parent
       .child('entryStates').child(worksetId).child(entryId);
 
-    stateRef.child('updatedAt').set(updatedAt);
+    change.after.ref.child('updatedAt').set(updatedAt);
     return stateRef.child('stage').set(stage);
   });
 
@@ -43,7 +47,8 @@ exports.onEntryStageUpdate = functions.database
     const { worksetId } = context.params;
     const worksetStateRef = change.after.ref.parent.parent.parent.parent
       .child('worksetStates').child(worksetId);
-    return change.after.ref.parent.parent
+    const worksetEntriesRef = change.after.ref.parent.parent;
+    return worksetEntriesRef
       .orderByChild('stage').startAt(3).once('value', snap => {
         const cntComplete = snap.numChildren();
         console.log(cntComplete);
@@ -71,13 +76,13 @@ exports.onEntrySynsetUpdate = functions.database
 
     if (synset && bfSynset) {
       synsetsRef.child(bfSynset).child(entryId).remove();
-      return entryFreqRef.once('value', snap => {
-        synsetsRef.child(synset).child(entryId).set(snap.val());
+      return entryFreqRef.once('value', freqSnap => {
+        synsetsRef.child(synset).child(entryId).set(freqSnap.val());
       });
 
     } else if (synset && !bfSynset) {
-      return entryFreqRef.once('value', snap => {
-        synsetsRef.child(synset).child(entryId).set(snap.val());
+      return entryFreqRef.once('value', freqSnap => {
+        synsetsRef.child(synset).child(entryId).set(freqSnap.val());
       });
     } else if (!synset && bfSynset) {
       return synsetsRef.child(bfSynset).child(entryId).remove();
@@ -87,7 +92,7 @@ exports.onEntrySynsetUpdate = functions.database
 
   });
 
-exports.onSynsetDelete = functions.database
+exports.onSynsetMemberDelete = functions.database
   .ref('/dict/{domainName}/synsets/{synsetId}/{memberId}')
   .onDelete((snapshot, context) => {
     const synsetRef = snapshot.ref.parent;
@@ -106,7 +111,7 @@ exports.onSynsetDelete = functions.database
         } else if (!synset[synsetId]) {
           const newSynsetId = Object.entries(synset)
             .sort((a, b) => Number(b[1]) - Number(a[1]))[0][0];
-            return members.forEach(member => {
+          return members.forEach(member => {
             snapshot.ref.parent.parent.parent
               .child('entries').child(member).child('synset')
               .set(newSynsetId);
