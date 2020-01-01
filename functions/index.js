@@ -49,7 +49,7 @@ exports.onEntryStageUpdate = functions.database
       .child('worksetStates').child(worksetId);
     const worksetEntriesRef = change.after.ref.parent.parent;
     return worksetEntriesRef
-      .orderByChild('stage').startAt(3).once('value', snap => {
+      .orderByChild('stage').startAt(2).once('value', snap => {
         const cntComplete = snap.numChildren();
         console.log(cntComplete);
         worksetStateRef.child('cntComplete').set(cntComplete);
