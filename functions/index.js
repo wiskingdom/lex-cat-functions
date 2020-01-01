@@ -6,10 +6,10 @@ const getEntryStage = (isSkipped, needCheck, pos, sem, updatedBy) => {
     return 0;
   }
   if (isSkipped) {
-    return 3;
+    return 2;
   }
   if (!needCheck && pos && sem) {
-    return 2;
+    return 3;
   } else {
     return 1;
   }
