@@ -1,15 +1,15 @@
 const functions = require('firebase-functions');
 
 // subfunctions
-const getEntryStage = (isTouched, isSkipped, needCheck, pos, sem) => {
-  if (!isTouched) {
+const getEntryStage = (isSkipped, needCheck, pos, sem, updatedBy) => {
+  if (!updatedBy) {
     return 0;
   }
   if (isSkipped) {
-    return 3;
+    return 2;
   }
   if (!needCheck && pos && sem) {
-    return 2;
+    return 3;
   } else {
     return 1;
   }
@@ -21,7 +21,7 @@ const getSuperEntryId = entryId => entryId.split('-').slice(0, 3).join('-');
 exports.onEntryUpdate = functions.database
   .ref('/dict/{domainName}/entries/{entryId}')
   .onUpdate((change, context) => {
-    const { isTouched, isSkipped, needCheck, pos, sem } = change.after.val();
+    const { isSkipped, needCheck, pos, sem, updatedBy } = change.after.val();
     const bf = change.before.val();
     if (isTouched === bf.isTouched
       && isSkipped === bf.isSkipped
@@ -32,7 +32,7 @@ exports.onEntryUpdate = functions.database
     }
     const { entryId } = context.params;
     const worksetId = getWorksetId(entryId);
-    const stage = getEntryStage(isTouched, isSkipped, needCheck, pos, sem);
+    const stage = getEntryStage(isSkipped, needCheck, pos, sem, updatedBy);
     const updatedAt = Date.now();
     const stateRef = change.after.ref.parent.parent
       .child('entryStates').child(worksetId).child(entryId);
@@ -71,7 +71,7 @@ exports.onEntrySynsetUpdate = functions.database
     const entryFreqRef = change.after.ref.parent.parent.parent
       .child('superEntries').child(superEntryId).child('freq');
     const updatedAt = Date.now();
-    stateRef.child('updatedAt').set(updatedAt);
+    change.after.ref.parent.child('updatedAt').set(updatedAt);
     stateRef.child('hasSynset').set(Boolean(synset));
 
     if (synset && bfSynset) {
