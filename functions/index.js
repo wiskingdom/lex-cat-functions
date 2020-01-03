@@ -50,9 +50,9 @@ exports.onEntryStageUpdate = functions.database
     const worksetEntriesRef = change.after.ref.parent.parent;
     return worksetEntriesRef
       .orderByChild('stage').startAt(3).once('value', snap => {
-        const cntComplete = snap.numChildren();
-        console.log(cntComplete);
-        worksetStateRef.child('cntComplete').set(cntComplete);
+        const cntCompletes = snap.numChildren();
+        console.log(cntCompletes);
+        worksetStateRef.child('cntCompletes').set(cntCompletes);
       });
   });
 
