@@ -23,7 +23,7 @@ exports.onEntryUpdate = functions.database
   .onUpdate((change, context) => {
     const { isSkipped, needCheck, pos, sem, updatedBy } = change.after.val();
     const bf = change.before.val();
-    if (isTouched === bf.isTouched
+    if (updatedBy === bf.updatedBy
       && isSkipped === bf.isSkipped
       && pos === bf.pos
       && sem === bf.sem
