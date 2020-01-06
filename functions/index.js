@@ -2,11 +2,13 @@ const functions = require('firebase-functions');
 
 // subfunctions
 const getEntryStage = (isSkipped, needCheck, pos, sem) => {
-  if (!isSkipped && pos && sem) {
+  if (needCheck) {
+    return 1;
+  } else if (!isSkipped && pos && sem) {
     return 3;
   } else if (isSkipped) {
     return 2;
-  } else if (pos || sem || needCheck) {
+  } else if (pos || sem) {
     return 1;
   } else {
     return 0;
@@ -20,6 +22,13 @@ exports.onEntryUpdate = functions.database
   .ref('/dict/{domainName}/entries/{entryId}')
   .onUpdate((change, context) => {
     const { isSkipped, needCheck, pos, sem } = change.after.val();
+    const bf = change.before.val();
+    if (isSkipped === bf.isSkipped 
+      && needCheck === bf.needCheck 
+      && pos === bf.pos 
+      && sem === bf.sem ) {
+      return null;
+    }
     const { entryId } = context.params;
     const worksetId = getWorksetId(entryId);
     const stage = getEntryStage(isSkipped, needCheck, pos, sem);
