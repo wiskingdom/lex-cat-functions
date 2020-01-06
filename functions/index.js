@@ -1,17 +1,15 @@
 const functions = require('firebase-functions');
 
 // subfunctions
-const getEntryStage = (isSkipped, needCheck, pos, sem, updatedBy) => {
-  if (!updatedBy) {
-    return 0;
-  }
-  if (isSkipped) {
-    return 2;
-  }
-  if (!needCheck && pos && sem) {
+const getEntryStage = (isSkipped, needCheck, pos, sem) => {
+  if (!isSkipped && pos && sem) {
     return 3;
-  } else {
+  } else if (isSkipped) {
+    return 2;
+  } else if (pos || sem || needCheck) {
     return 1;
+  } else {
+    return 0;
   }
 };
 const getWorksetId = entryId => entryId.split('-').slice(0, 2).join('-');
@@ -21,18 +19,10 @@ const getSuperEntryId = entryId => entryId.split('-').slice(0, 3).join('-');
 exports.onEntryUpdate = functions.database
   .ref('/dict/{domainName}/entries/{entryId}')
   .onUpdate((change, context) => {
-    const { isSkipped, needCheck, pos, sem, updatedBy } = change.after.val();
-    const bf = change.before.val();
-    if (updatedBy === bf.updatedBy
-      && isSkipped === bf.isSkipped
-      && pos === bf.pos
-      && sem === bf.sem
-      && needCheck === bf.needCheck) {
-      return null;
-    }
+    const { isSkipped, needCheck, pos, sem } = change.after.val();
     const { entryId } = context.params;
     const worksetId = getWorksetId(entryId);
-    const stage = getEntryStage(isSkipped, needCheck, pos, sem, updatedBy);
+    const stage = getEntryStage(isSkipped, needCheck, pos, sem);
     const updatedAt = Date.now();
     const stateRef = change.after.ref.parent.parent
       .child('entryStates').child(worksetId).child(entryId);
