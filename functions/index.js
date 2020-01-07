@@ -4,12 +4,10 @@ const functions = require('firebase-functions');
 const getEntryStage = (isSkipped, needCheck, pos, sem) => {
   if (needCheck) {
     return 1;
-  } else if (!isSkipped && pos && sem) {
+  } else if (!isSkipped && pos && sem && getters.semValid) {
     return 3;
   } else if (isSkipped) {
     return 2;
-  } else if (pos || sem) {
-    return 1;
   } else {
     return 0;
   }
