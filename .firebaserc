@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "lex-cat"
+    "default": "lex-cat",
+    "test": "lex-cat-test"
   }
 }
