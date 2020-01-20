@@ -4,24 +4,58 @@ const functions = require('firebase-functions');
 const getWorksetId = entryId => entryId.split('-').slice(0, 2).join('-');
 
 // common functions 
-exports.onEntryMarkingUpdate = functions.database
-  .ref('/dict/{domainName}/entryMarkings/{worksetId}/{entryId}')
+exports.onEntryMarkingStageUpdate = functions.database
+  .ref('/dict/{domainName}/entryMarkings/{worksetId}/{entryId}/stage')
   .onUpdate((change, context) => {
     const { worksetId } = context.params;
-    const { stage } = change.after.val();
-    const bf = change.before.val();
-    if (stage === bf.stage) {
+    const stage = change.after.val();
+    const bfStage = change.before.val();
+    if (stage === bfStage) {
       return null;
     }
-    const worksetRef = change.after.ref.parent.parent.parent
+    const worksetRef = change.after.ref.parent.parent.parent.parent
       .child('worksets').child(worksetId);
-    const worksetMarkingsRef = change.after.ref.parent;
+    const worksetMarkingsRef = change.after.ref.parent.parent;
     return worksetMarkingsRef
       .orderByChild('stage').startAt(2).once('value', snap => {
         const cntCompletes = snap.numChildren();
         console.log(`${worksetId}: ${cntCompletes} entries complete!`)
         worksetRef.update({ cntCompletes });
       });
+  });
+exports.onEntryMarkingIssueProcessUpdate = functions.database
+  .ref('/dict/{domainName}/entryMarkings/{worksetId}/{entryId}/issueProcess')
+  .onUpdate((change, context) => {
+    const { worksetId } = context.params;
+    const issueProcess = change.after.val();
+    const bfIssueProcess = change.before.val();
+    if (issueProcess === bfIssueProcess) {
+      return null;
+    }
+    const worksetRef = change.after.ref.parent.parent.parent.parent
+      .child('worksets').child(worksetId);
+    const worksetMarkingsRef = change.after.ref.parent.parent;
+    return new Promise(resolve => {
+      worksetMarkingsRef
+      .orderByChild('issueProcess').equalTo(1).once('value', snap => {
+        const cntOpenIssues = snap.numChildren();
+        console.log(`${worksetId}: ${cntOpenIssues} issues open!`)
+        worksetRef.update({ cntOpenIssues });
+      });
+      worksetMarkingsRef
+      .orderByChild('issueProcess').equalTo(2).once('value', snap => {
+        const cntRepliedIssues = snap.numChildren();
+        console.log(`${worksetId}: ${cntRepliedIssues} issues open!`)
+        worksetRef.update({ cntRepliedIssues });
+      });
+      worksetMarkingsRef
+      .orderByChild('issueProcess').equalTo(3).once('value', snap => {
+        const cntClosedIssues = snap.numChildren();
+        console.log(`${worksetId}: ${cntClosedIssues} issues closed!`)
+        worksetRef.update({ cntClosedIssues });
+      });
+      resolve();
+    }); 
   });
 
 exports.onEntrySynOfUpdate = functions.database
